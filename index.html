@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FilmScan Pro - 移动显影版</title>
+    <title>FilmScan Pro</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -287,36 +287,42 @@
 
     <section class="controls-section">
         <div class="control-group">
-            <label>曝光 (Gamma) <span id="gammaVal">1.8</span></label>
+            <label>Gamma / 曝光 <span id="gammaVal">1.8</span></label>
             <input type="range" id="gamma" min="0.5" max="3.5" step="0.1" value="1.8">
         </div>
         <div class="control-group">
-            <label>暗部 (Black) <span id="blackVal">5</span></label>
+            <label>Black Level / 暗部 <span id="blackVal">5</span></label>
             <input type="range" id="black" min="0" max="50" step="1" value="5">
         </div>
 
         <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333;">
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">色罩手动微调 (Mask RGB)</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Mask RGB Adjustment / 色罩手动微调</p>
             <div class="control-group">
-                <label>红色通道 (Red) <span id="rMVal">255</span></label>
+                <label>Red / 红 <span id="rMVal">255</span></label>
                 <input type="range" id="rM" min="10" max="255" step="1" value="255">
             </div>
             <div class="control-group">
-                <label>绿色通道 (Green) <span id="gMVal">150</span></label>
+                <label>Green / 绿 <span id="gMVal">150</span></label>
                 <input type="range" id="gM" min="10" max="255" step="1" value="150">
             </div>
             <div class="control-group">
-                <label>蓝色通道 (Blue) <span id="bMVal">80</span></label>
+                <label>Blue / 蓝 <span id="bMVal">80</span></label>
                 <input type="range" id="bM" min="10" max="255" step="1" value="80">
             </div>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button class="btn btn-secondary" style="flex: 1;" onclick="doSample()">采集色罩</button>
-            <button class="btn btn-primary" style="flex: 1;" onclick="snapshot()">拍摄</button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="doSample()">Sample Mask / 采集色罩</button>
+            <button class="btn btn-primary" style="flex: 1;" onclick="snapshot()">Capture / 拍摄</button>
         </div>
         <button class="btn btn-secondary" onclick="toggleCam()"
-            style="padding: 10px; font-size: 12px; margin-bottom: 40px;">翻转镜头</button>
+            style="padding: 10px; font-size: 12px; margin-bottom: 20px;">Switch Camera / 翻转镜头</button>
+
+        <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px; padding-bottom: 20px;">
+            Author: <a href="https://github.com/lebinliang" target="_blank"
+                style="color: #999; text-decoration: none; border-bottom: 1px solid #666;">lebinliang</a> <br>
+            Designed for Film Photography
+        </div>
     </section>
 
     <!-- 隐藏的色罩参数已移除，改用上方 UI 控件 -->
