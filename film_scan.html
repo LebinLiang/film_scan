@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FilmScan Pro - 移动显影版</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --accent-color: #ffaa33;
+            --text-primary: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* 启动遮罩层：解决移动端必须手动点击才能开启摄像头的限制 */
+        #startOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .viewer-section {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.show-controls .viewer-section {
+            flex: 0 0 50dvh !important;
+            height: 50dvh !important;
+        }
+
+        #processedCanvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #videoSource {
+            display: none;
+        }
+
+        .reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .controls-section {
+            background: #1a1a1e;
+            padding: 0;
+            height: 0;
+            overflow: hidden;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 1px solid #333;
+        }
+
+        body.show-controls .controls-section {
+            flex: 0 0 50dvh !important;
+            height: 50dvh !important;
+            padding: 20px;
+            overflow-y: auto !important;
+            display: block !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #settingsToggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border-radius: 25px;
+            display: none;
+            /* Hidden until camera starts */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #settingsToggle svg {
+            width: 24px;
+            height: 24px;
+            fill: #000;
+            transition: transform 0.3s ease;
+        }
+
+        body.show-controls #settingsToggle {
+            bottom: calc(50dvh - 25px);
+            transform: rotate(90deg);
+        }
+
+        /* Floating Button Base Style */
+        .float-btn {
+            position: fixed;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: #444;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .float-btn.active {
+            background: #e74c3c;
+            /* Red for Lock */
+            border-color: #fff;
+        }
+
+        .float-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+        }
+
+        /* Stack Positioning */
+        #modeToggle {
+            /* Special positioning handled by base style + override */
+            bottom: 80px;
+        }
+
+        #fullscreenToggle {
+            bottom: 140px;
+        }
+
+        /* Split-screen Adjustments */
+        body.show-controls #modeToggle {
+            bottom: calc(50dvh + 35px);
+        }
+
+        body.show-controls #fullscreenToggle {
+            bottom: calc(50dvh + 95px);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .control-group label span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            -webkit-appearance: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-color);
+            border-radius: 50%;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="debug"></div>
+
+    <div id="settingsToggle" onclick="toggleControls()">
+        <svg viewBox="0 0 24 24">
+            <path
+                d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.13,5.91,7.62,6.29L5.23,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.72,8.87 C2.61,9.08,2.66,9.34,2.83,9.48l2.03,1.58C4.82,11.36,4.8,11.67,4.8,12c0,0.33,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" />
+        </svg>
+    </div>
+
+    <div id="modeToggle" class="float-btn" onclick="toggleMode()" style="background: #444 !important;" title="切换正常/反色">
+        <svg viewBox="0 0 24 24">
+            <path
+                d="M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z" />
+        </svg>
+    </div>
+
+    <div id="fullscreenToggle" class="float-btn" onclick="toggleFullscreen()" title="全屏">
+        <svg viewBox="0 0 24 24">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+        </svg>
+    </div>
+
+    <!-- 启动界面 -->
+    <div id="startOverlay">
+        <h1 style="margin-bottom: 10px;">FilmScan Pro</h1>
+        <p style="color: #999; margin-bottom: 30px;">点击下方按钮允许访问摄像头进行实时去色罩</p>
+        <button class="btn btn-primary" onclick="initCamera()" style="width: 200px;">开启扫描仪</button>
+        <p style="font-size: 12px; color: #666; margin-top: 20px;">请确保使用 Safari (iOS) 或 Chrome (Android)<br>并且在 HTTPS
+            环境下运行</p>
+    </div>
+
+    <main class="viewer-section">
+        <canvas id="processedCanvas"></canvas>
+        <div class="reticle"></div>
+        <video id="videoSource" autoplay playsinline muted></video>
+    </main>
+
+    <section class="controls-section">
+        <div class="control-group">
+            <label>曝光 (Gamma) <span id="gammaVal">1.8</span></label>
+            <input type="range" id="gamma" min="0.5" max="3.5" step="0.1" value="1.8">
+        </div>
+        <div class="control-group">
+            <label>暗部 (Black) <span id="blackVal">5</span></label>
+            <input type="range" id="black" min="0" max="50" step="1" value="5">
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333;">
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">色罩手动微调 (Mask RGB)</p>
+            <div class="control-group">
+                <label>红色通道 (Red) <span id="rMVal">255</span></label>
+                <input type="range" id="rM" min="10" max="255" step="1" value="255">
+            </div>
+            <div class="control-group">
+                <label>绿色通道 (Green) <span id="gMVal">150</span></label>
+                <input type="range" id="gM" min="10" max="255" step="1" value="150">
+            </div>
+            <div class="control-group">
+                <label>蓝色通道 (Blue) <span id="bMVal">80</span></label>
+                <input type="range" id="bM" min="10" max="255" step="1" value="80">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="doSample()">采集色罩</button>
+            <button class="btn btn-primary" style="flex: 1;" onclick="snapshot()">拍摄</button>
+        </div>
+        <button class="btn btn-secondary" onclick="toggleCam()"
+            style="padding: 10px; font-size: 12px; margin-bottom: 40px;">翻转镜头</button>
+    </section>
+
+    <!-- 隐藏的色罩参数已移除，改用上方 UI 控件 -->
+
+    <script>
+        const video = document.getElementById('videoSource');
+        const canvas = document.getElementById('processedCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let stream = null;
+        let facingMode = 'environment';
+
+        async function initCamera() {
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                const constraints = {
+                    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                await video.play();
+                document.getElementById('startOverlay').style.display = 'none';
+                document.getElementById('settingsToggle').style.display = 'flex';
+                document.getElementById('modeToggle').style.display = 'flex';
+                document.getElementById('fullscreenToggle').style.display = 'flex';
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                requestAnimationFrame(loop);
+            } catch (err) {
+                alert('摄像头打开失败：' + err.message + '\n请确认是 HTTPS 或 localhost 环境。');
+                console.error(err);
+            }
+        }
+
+        function loop() {
+            if (video.readyState >= 2) {
+                render();
+            }
+            requestAnimationFrame(loop);
+        }
+
+        let isNormalMode = false;
+
+        function render() {
+            ctx.drawImage(video, 0, 0);
+            if (isNormalMode) return; // Skip film processing logic
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+
+            const gamma = 1.0 / parseFloat(document.getElementById('gamma').value);
+            const black = parseInt(document.getElementById('black').value) / 100.0;
+            const rm = parseInt(document.getElementById('rM').value) / 255 || 1;
+            const gm = parseInt(document.getElementById('gM').value) / 255 || 1;
+            const bm = parseInt(document.getElementById('bM').value) / 255 || 1;
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = (data[i] / 255) / rm;
+                let g = (data[i + 1] / 255) / gm;
+                let b = (data[i + 2] / 255) / bm;
+
+                r = 1.0 - r; g = 1.0 - g; b = 1.0 - b;
+                r = (r - black) / (0.95 - black);
+                g = (g - black) / (0.95 - black);
+                b = (b - black) / (0.95 - black);
+
+                data[i] = Math.pow(Math.max(0, r), gamma) * 255;
+                data[i + 1] = Math.pow(Math.max(0, g), gamma) * 255;
+                data[i + 2] = Math.pow(Math.max(0, b), gamma) * 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function doSample() {
+            const temp = document.createElement('canvas');
+            temp.width = video.videoWidth; temp.height = video.videoHeight;
+            temp.getContext('2d').drawImage(video, 0, 0);
+            const p = temp.getContext('2d').getImageData(temp.width / 2 - 5, temp.height / 2 - 5, 10, 10).data;
+            let r = 0, g = 0, b = 0;
+            for (let i = 0; i < p.length; i += 4) { r += p[i]; g += p[i + 1]; b += p[i + 2]; }
+
+            const rAvg = Math.round(r / (p.length / 4));
+            const gAvg = Math.round(g / (p.length / 4));
+            const bAvg = Math.round(b / (p.length / 4));
+
+            document.getElementById('rM').value = rAvg;
+            document.getElementById('gM').value = gAvg;
+            document.getElementById('bM').value = bAvg;
+
+            document.getElementById('rMVal').innerText = rAvg;
+            document.getElementById('gMVal').innerText = gAvg;
+            document.getElementById('bMVal').innerText = bAvg;
+        }
+
+        function toggleCam() {
+            facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+            initCamera();
+        }
+
+        function snapshot() {
+            const a = document.createElement('a');
+            a.download = 'scan.png';
+            a.href = canvas.toDataURL();
+            a.click();
+        }
+
+        document.querySelectorAll('input').forEach(i => i.oninput = () => {
+            if (document.getElementById(i.id + 'Val')) {
+                document.getElementById(i.id + 'Val').innerText = i.value;
+            }
+        });
+
+        function toggleControls() {
+            document.body.classList.toggle('show-controls');
+        }
+
+        let isLocked = false;
+
+        async function toggleMode() {
+            isNormalMode = !isNormalMode;
+            const btn = document.getElementById('modeToggle');
+
+            if (isNormalMode) {
+                // Normal Mode: Auto settings
+                btn.style.background = '#2ecc71'; // Green for normal
+                btn.classList.add('active');
+                await setCameraConfig('continuous');
+            } else {
+                // Negative Mode: Lock settings
+                btn.style.background = '#444'; // Grey for negative
+                btn.classList.remove('active');
+                await setCameraConfig('manual');
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        async function setCameraConfig(mode) {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            if (!track.getCapabilities || !track.getSettings) return;
+
+            const caps = track.getCapabilities();
+            const settings = track.getSettings();
+            const advanced = {};
+
+            if (mode === 'manual') {
+                // 1. Lock/Manual Exposure
+                if (caps.exposureMode && caps.exposureMode.includes('manual')) {
+                    advanced.exposureMode = 'manual';
+
+                    // Keep existing values locked
+                    if (caps.exposureTime && settings.exposureTime) {
+                        advanced.exposureTime = settings.exposureTime;
+                    }
+                    if (caps.iso && settings.iso) {
+                        advanced.iso = settings.iso;
+                    }
+                }
+
+                // 2. Lock WB
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('manual')) {
+                    advanced.whiteBalanceMode = 'manual';
+                    if (caps.colorTemperature && settings.colorTemperature) {
+                        advanced.colorTemperature = settings.colorTemperature;
+                    }
+                }
+
+                // 3. Lock Focus
+                if (caps.focusMode && caps.focusMode.includes('manual')) {
+                    advanced.focusMode = 'manual';
+                    if (caps.focusDistance && settings.focusDistance) {
+                        advanced.focusDistance = settings.focusDistance;
+                    }
+                }
+            } else {
+                // Auto Mode
+                if (caps.exposureMode && caps.exposureMode.includes('continuous')) advanced.exposureMode = 'continuous';
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('continuous')) advanced.whiteBalanceMode = 'continuous';
+                if (caps.focusMode && caps.focusMode.includes('continuous')) advanced.focusMode = 'continuous';
+            }
+
+            if (Object.keys(advanced).length > 0) {
+                try {
+                    await track.applyConstraints({ advanced: [advanced] });
+                } catch (e) { console.warn(e); }
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Initialize sliders bounds based on camera capabilities
+        function initCameraControls() {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            const caps = track.getCapabilities();
+
+            // Helper to setup a slider
+            const setupSlider = (id, capName) => {
+                const el = document.getElementById(id);
+                if (caps[capName]) {
+                    el.min = caps[capName].min;
+                    el.max = caps[capName].max;
+                    el.step = caps[capName].step;
+                    el.parentElement.style.display = 'block';
+                } else {
+                    el.parentElement.style.display = 'none';
+                }
+            };
+
+            setupSlider('exposureTime', 'exposureTime');
+            setupSlider('iso', 'iso');
+            setupSlider('colorTemperature', 'colorTemperature');
+            setupSlider('focusDistance', 'focusDistance');
+        }
+
+        // Apply a single manual setting immediately
+        async function applyManualSetting(key, value) {
+            if (isNormalMode && !isLocked) return; // Ignore if in auto mode
+            if (!stream) return;
+
+            const track = stream.getVideoTracks()[0];
+            const advanced = {};
+            advanced[key] = parseFloat(value);
+
+            // Ensure we are in manual mode for that capability
+            if (key === 'exposureTime' || key === 'iso') advanced.exposureMode = 'manual';
+            if (key === 'colorTemperature') advanced.whiteBalanceMode = 'manual';
+            if (key === 'focusDistance') advanced.focusMode = 'manual';
+
+            try {
+                await track.applyConstraints({ advanced: [advanced] });
+                document.getElementById(key + 'Val').innerText = value;
+            } catch (e) {
+                console.error('Apply constraint failed:', e);
+            }
+        }
+
+        async function setCameraConfig(mode) {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            if (!track.getCapabilities || !track.getSettings) return;
+
+            const caps = track.getCapabilities();
+            const settings = track.getSettings();
+            const advanced = {};
+
+            if (mode === 'manual') {
+                // 1. Lock/Manual Exposure
+                if (caps.exposureMode && caps.exposureMode.includes('manual')) {
+                    advanced.exposureMode = 'manual';
+
+                    // Populate sliders with current values
+                    if (caps.exposureTime && settings.exposureTime) {
+                        advanced.exposureTime = settings.exposureTime;
+                        document.getElementById('exposureTime').value = settings.exposureTime;
+                        document.getElementById('exposureTimeVal').innerText = Math.round(settings.exposureTime);
+                    }
+                    if (caps.iso && settings.iso) {
+                        advanced.iso = settings.iso;
+                        document.getElementById('iso').value = settings.iso;
+                        document.getElementById('isoVal').innerText = settings.iso;
+                    }
+                }
+
+                // 2. Lock WB
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('manual')) {
+                    advanced.whiteBalanceMode = 'manual';
+                    if (caps.colorTemperature && settings.colorTemperature) {
+                        advanced.colorTemperature = settings.colorTemperature;
+                        document.getElementById('colorTemperature').value = settings.colorTemperature;
+                        document.getElementById('whiteBalanceModeVal').innerText = settings.colorTemperature;
+                    }
+                }
+
+                // 3. Lock Focus
+                if (caps.focusMode && caps.focusMode.includes('manual')) {
+                    advanced.focusMode = 'manual';
+                    if (caps.focusDistance && settings.focusDistance) {
+                        advanced.focusDistance = settings.focusDistance;
+                        document.getElementById('focusDistance').value = settings.focusDistance;
+                        document.getElementById('focusDistanceVal').innerText = settings.focusDistance;
+                    }
+                }
+            } else {
+                // Auto Mode
+                if (caps.exposureMode && caps.exposureMode.includes('continuous')) advanced.exposureMode = 'continuous';
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('continuous')) advanced.whiteBalanceMode = 'continuous';
+                if (caps.focusMode && caps.focusMode.includes('continuous')) advanced.focusMode = 'continuous';
+
+                // Reset UI labels
+                ['exposureTimeVal', 'isoVal', 'whiteBalanceModeVal', 'focusDistanceVal'].forEach(id => {
+                    document.getElementById(id).innerText = 'Auto';
+                });
+            }
+
+            if (Object.keys(advanced).length > 0) {
+                try {
+                    await track.applyConstraints({ advanced: [advanced] });
+                } catch (e) { console.warn(e); }
+            }
+        }
+    </script>
+</body>
+
+</html>
