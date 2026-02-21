@@ -273,10 +273,26 @@
     <!-- 启动界面 -->
     <div id="startOverlay">
         <h1 style="margin-bottom: 10px;">FilmScan Pro</h1>
-        <p style="color: #999; margin-bottom: 30px;">点击下方按钮允许访问摄像头进行实时去色罩</p>
+        <p style="color: #999; margin-bottom: 20px; font-size: 14px;">胶片实时去色罩预览工具</p>
+        
+        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>使用说明：</strong></p>
+            <ul style="padding-left: 20px; margin-bottom: 10px;">
+                <li>将胶片置于背光均匀的屏幕或灯箱上。</li>
+                <li>对准片基后点击“采集色罩”以消除底片颜色。</li>
+                <li>调节各项参数以获得最佳预览效果。</li>
+            </ul>
+            <p style="color: #ffaa33; font-size: 12px; margin-top: 10px;">
+                <em>⚠注意：由于手机摄像头白平衡算法及背光光源影响，本项目仅供实时预览参考，无法替代专业扫描仪的色彩精度。</em>
+            </p>
+        </div>
+
         <button class="btn btn-primary" onclick="initCamera()" style="width: 200px;">开启扫描仪</button>
-        <p style="font-size: 12px; color: #666; margin-top: 20px;">请确保使用 Safari (iOS) 或 Chrome (Android)<br>并且在 HTTPS
-            环境下运行</p>
+        
+        <p style="font-size: 12px; color: #666; margin-top: 20px;">
+            Author: <a href="https://github.com/lebinliang" target="_blank" style="color: #999;">lebinliang</a><br>
+            建议在 Safari (iOS) 或 Chrome (Android) 中使用
+        </p>
     </div>
 
     <main class="viewer-section">
