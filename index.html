@@ -275,7 +275,7 @@
         <h1 style="margin-bottom: 10px;">FilmScan Pro</h1>
         <p style="color: #999; margin-bottom: 20px; font-size: 14px;">胶片实时去色罩预览工具</p>
         
-        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #ccc;">
+        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; max-width: 300px; font-size: 13px; color: #ccc;">
             <p style="margin-bottom: 8px;"><strong>使用说明：</strong></p>
             <ul style="padding-left: 20px; margin-bottom: 10px;">
                 <li>将胶片置于背光均匀的屏幕或灯箱上。</li>
@@ -287,8 +287,20 @@
             </p>
         </div>
 
-        <button class="btn btn-primary" onclick="initCamera()" style="width: 200px;">开启扫描仪</button>
+        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>🚀 v2.0 更新 (2026.02):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                WebGL加速实现60帧流畅预览；新增高光与饱和度调节； 优化胶片去色罩算法。
+            </p>
+        </div>
+
+        <button class="btn btn-primary" onclick="initCamera()" style="width: 200px; margin-bottom: 20px;">开启扫描仪</button>
         
+        <div style="margin-top: 10px; text-align: center;">
+            <p style="font-size: 13px; color: #ffaa33; margin-bottom: 10px;">☕ 觉得好用？请作者喝杯咖啡吧~</p>
+            <img src="./qrcode.png" alt="Buy me a coffee" style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid #333;">
+        </div>
+
         <p style="font-size: 12px; color: #666; margin-top: 20px;">
             Author: <a href="https://github.com/lebinliang" target="_blank" style="color: #999;">lebinliang</a><br>
             建议在 Safari (iOS) 或 Chrome (Android) 中使用
@@ -297,7 +309,7 @@
 
     <main class="viewer-section">
         <canvas id="processedCanvas"></canvas>
-        <div class="reticle"></div>
+        <div class="reticle" id="reticle"></div>
         <video id="videoSource" autoplay playsinline muted></video>
     </main>
 
@@ -685,6 +697,8 @@
         async function toggleMode() {
             isNormalMode = !isNormalMode;
             const btn = document.getElementById('modeToggle');
+            // Toggle reticle: show in normal mode (for sampling), hide in negative mode (for viewing)
+            document.getElementById('reticle').style.display = isNormalMode ? 'block' : 'none';
 
             if (isNormalMode) {
                 // Normal Mode: Auto settings
