@@ -244,6 +244,66 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 2000;
         }
+
+        /* Camera Selector Styles */
+        .camera-selector-group {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+
+        .camera-selector-group label {
+            display: block;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .camera-selector-group label .camera-icon {
+            margin-right: 6px;
+        }
+
+        #cameraSelect {
+            width: 100%;
+            padding: 12px 14px;
+            background: #2a2a2e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #cameraSelect:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 170, 51, 0.2);
+        }
+
+        #cameraSelect option {
+            background: #2a2a2e;
+            color: #fff;
+            padding: 8px;
+        }
+
+        .camera-count-badge {
+            display: inline-block;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
     </style>
 </head>
 
@@ -274,8 +334,9 @@
     <div id="startOverlay">
         <h1 style="margin-bottom: 10px;">FilmScan Pro</h1>
         <p style="color: #999; margin-bottom: 20px; font-size: 14px;">胶片实时去色罩预览工具</p>
-        
-        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; max-width: 300px; font-size: 13px; color: #ccc;">
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; max-width: 300px; font-size: 13px; color: #ccc;">
             <p style="margin-bottom: 8px;"><strong>使用说明：</strong></p>
             <ul style="padding-left: 20px; margin-bottom: 10px;">
                 <li>将胶片置于背光均匀的屏幕或灯箱上。</li>
@@ -287,18 +348,28 @@
             </p>
         </div>
 
-        <div style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #ccc;">
-            <p style="margin-bottom: 8px;"><strong>🚀 v2.0 更新 (2026.02):</strong></p>
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>🚀 v2.1 更新 (2026.03):</strong></p>
             <p style="margin-bottom: 0; line-height: 1.6;">
-                WebGL加速实现60帧流畅预览；新增高光与饱和度调节； 优化胶片去色罩算法。
+                新增后置摄像头切换功能，支持多摄手机自由选择不同镜头。
+            </p>
+        </div>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #666;">
+            <p style="margin-bottom: 8px;"><strong>v2.0 更新 (2026.02):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                WebGL加速实现60帧流畅预览；新增高光与饱和度调节；优化胶片去色罩算法。
             </p>
         </div>
 
         <button class="btn btn-primary" onclick="initCamera()" style="width: 200px; margin-bottom: 20px;">开启扫描仪</button>
-        
+
         <div style="margin-top: 10px; text-align: center;">
             <p style="font-size: 13px; color: #ffaa33; margin-bottom: 10px;">📕 关注小红书账号，私信反馈问题和体验新工具</p>
-            <img src="./qrcode_xhs.png" alt="Xiaohongshu QR Code" style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid #333;">
+            <img src="./qrcode_xhs.png" alt="Xiaohongshu QR Code"
+                style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid #333;">
         </div>
 
         <p style="font-size: 12px; color: #666; margin-top: 20px;">
@@ -351,8 +422,14 @@
             <button class="btn btn-secondary" style="flex: 1;" onclick="doSample()">Sample Mask / 采集色罩</button>
             <button class="btn btn-primary" style="flex: 1;" onclick="snapshot()">Capture / 拍摄</button>
         </div>
-        <button class="btn btn-secondary" onclick="toggleCam()"
-            style="padding: 10px; font-size: 12px; margin-bottom: 20px;">Switch Camera / 翻转镜头</button>
+        <div class="camera-selector-group">
+            <label>
+                Camera / 摄像头选择 <span id="cameraCountBadge" class="camera-count-badge" style="display:none;"></span>
+            </label>
+            <select id="cameraSelect" onchange="switchCamera(this.value)">
+                <option value="environment">默认后置摄像头</option>
+            </select>
+        </div>
 
         <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px; padding-bottom: 20px;">
             Author: <a href="https://github.com/lebinliang" target="_blank"
@@ -369,6 +446,8 @@
         const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
         let stream = null;
         let facingMode = 'environment';
+        let selectedDeviceId = null; // null means use facingMode
+        let allVideoDevices = [];
         let isNormalMode = false;
         let isLocked = false;
 
@@ -486,11 +565,11 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
                 -1.0, -1.0,
-                 1.0, -1.0,
-                -1.0,  1.0,
-                -1.0,  1.0,
-                 1.0, -1.0,
-                 1.0,  1.0,
+                1.0, -1.0,
+                -1.0, 1.0,
+                -1.0, 1.0,
+                1.0, -1.0,
+                1.0, 1.0,
             ]), gl.STATIC_DRAW);
 
             texCoordBuffer = gl.createBuffer();
@@ -516,10 +595,19 @@
             try {
                 if (stream) stream.getTracks().forEach(t => t.stop());
 
-                const constraints = {
-                    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-                    audio: false
-                };
+                let constraints;
+                if (selectedDeviceId) {
+                    // Use specific device ID for multi-camera selection
+                    constraints = {
+                        video: { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    };
+                } else {
+                    constraints = {
+                        video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    };
+                }
 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
@@ -532,8 +620,11 @@
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                
+
                 if (!program) initWebGL();
+
+                // Enumerate cameras after first successful getUserMedia (labels become available)
+                await enumerateCameras();
 
                 requestAnimationFrame(loop);
             } catch (err) {
@@ -584,60 +675,60 @@
         function doSample() {
             // Create a temporary canvas to sample the video frame
             const temp = document.createElement('canvas');
-            temp.width = video.videoWidth; 
+            temp.width = video.videoWidth;
             temp.height = video.videoHeight;
             const tempCtx = temp.getContext('2d', { willReadFrequently: true });
             tempCtx.drawImage(video, 0, 0);
-            
+
             // Sample a larger area (40x40) for better accuracy
             const sampleSize = 40;
             const p = tempCtx.getImageData(
-                temp.width / 2 - sampleSize / 2, 
-                temp.height / 2 - sampleSize / 2, 
-                sampleSize, 
+                temp.width / 2 - sampleSize / 2,
+                temp.height / 2 - sampleSize / 2,
+                sampleSize,
                 sampleSize
             ).data;
-            
+
             let r = 0, g = 0, b = 0;
             let validPixels = 0;
-            
+
             // Calculate mean
-            for (let i = 0; i < p.length; i += 4) { 
-                r += p[i]; 
-                g += p[i + 1]; 
-                b += p[i + 2]; 
+            for (let i = 0; i < p.length; i += 4) {
+                r += p[i];
+                g += p[i + 1];
+                b += p[i + 2];
             }
-            
+
             const totalPixels = p.length / 4;
             const rMean = r / totalPixels;
             const gMean = g / totalPixels;
             const bMean = b / totalPixels;
-            
+
             // Calculate standard deviation
             let rVar = 0, gVar = 0, bVar = 0;
             for (let i = 0; i < p.length; i += 4) {
                 rVar += Math.pow(p[i] - rMean, 2);
-                gVar += Math.pow(p[i+1] - gMean, 2);
-                bVar += Math.pow(p[i+2] - bMean, 2);
+                gVar += Math.pow(p[i + 1] - gMean, 2);
+                bVar += Math.pow(p[i + 2] - bMean, 2);
             }
-            
+
             const rStdDev = Math.sqrt(rVar / totalPixels);
             const gStdDev = Math.sqrt(gVar / totalPixels);
             const bStdDev = Math.sqrt(bVar / totalPixels);
-            
+
             // Recalculate mean excluding outliers (values > 1.5 std dev from mean)
             r = 0; g = 0; b = 0;
             for (let i = 0; i < p.length; i += 4) {
                 if (Math.abs(p[i] - rMean) <= 1.5 * rStdDev &&
-                    Math.abs(p[i+1] - gMean) <= 1.5 * gStdDev &&
-                    Math.abs(p[i+2] - bMean) <= 1.5 * bStdDev) {
+                    Math.abs(p[i + 1] - gMean) <= 1.5 * gStdDev &&
+                    Math.abs(p[i + 2] - bMean) <= 1.5 * bStdDev) {
                     r += p[i];
-                    g += p[i+1];
-                    b += p[i+2];
+                    g += p[i + 1];
+                    b += p[i + 2];
                     validPixels++;
                 }
             }
-            
+
             // Fallback to simple average if too many pixels were excluded
             if (validPixels < totalPixels * 0.3) {
                 validPixels = totalPixels;
@@ -657,12 +748,92 @@
             document.getElementById('rMVal').innerText = rAvg;
             document.getElementById('gMVal').innerText = gAvg;
             document.getElementById('bMVal').innerText = bAvg;
-            
+
             updateUiValues();
         }
 
         function toggleCam() {
             facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+            selectedDeviceId = null;
+            initCamera();
+        }
+
+        // Enumerate all video devices and populate the camera selector
+        async function enumerateCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                allVideoDevices = devices.filter(d => d.kind === 'videoinput');
+
+                const select = document.getElementById('cameraSelect');
+                const badge = document.getElementById('cameraCountBadge');
+                const currentTrack = stream ? stream.getVideoTracks()[0] : null;
+                const currentDeviceId = currentTrack ? currentTrack.getSettings().deviceId : null;
+
+                // Clear existing options
+                select.innerHTML = '';
+
+                if (allVideoDevices.length === 0) {
+                    select.innerHTML = '<option value="">未检测到摄像头</option>';
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                // Build friendly labels for each camera
+                allVideoDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+
+                    // Use device label if available, otherwise generate a name
+                    let label = device.label || '';
+                    if (label) {
+                        // Shorten common long labels
+                        // Try to identify camera type from label
+                        const lowerLabel = label.toLowerCase();
+                        let friendlyName = '';
+                        if (lowerLabel.includes('ultra') || lowerLabel.includes('超广') || lowerLabel.includes('wide angle')) {
+                            friendlyName = '超广角 Ultra Wide';
+                        } else if (lowerLabel.includes('telephoto') || lowerLabel.includes('tele') || lowerLabel.includes('长焦')) {
+                            friendlyName = '长焦 Telephoto';
+                        } else if (lowerLabel.includes('macro') || lowerLabel.includes('微距')) {
+                            friendlyName = '微距 Macro';
+                        } else if (lowerLabel.includes('depth') || lowerLabel.includes('深度')) {
+                            friendlyName = '深度 Depth';
+                        } else if (lowerLabel.includes('front') || lowerLabel.includes('前置') || lowerLabel.includes('user')) {
+                            friendlyName = '前置 Front';
+                        } else if (lowerLabel.includes('wide') && !lowerLabel.includes('ultra')) {
+                            friendlyName = '广角 Wide';
+                        }
+
+                        if (friendlyName) {
+                            option.textContent = `${friendlyName} (${label})`;
+                        } else {
+                            option.textContent = label;
+                        }
+                    } else {
+                        option.textContent = `摄像头 ${index + 1}`;
+                    }
+
+                    // Mark currently active camera
+                    if (currentDeviceId && device.deviceId === currentDeviceId) {
+                        option.selected = true;
+                    }
+
+                    select.appendChild(option);
+                });
+
+                // Show camera count badge
+                badge.textContent = allVideoDevices.length;
+                badge.style.display = 'inline-block';
+
+            } catch (err) {
+                console.warn('Failed to enumerate cameras:', err);
+            }
+        }
+
+        // Switch to a specific camera by deviceId
+        function switchCamera(deviceId) {
+            if (!deviceId) return;
+            selectedDeviceId = deviceId;
             initCamera();
         }
 
