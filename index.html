@@ -350,6 +350,14 @@
 
         <div
             style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>✨ v2.2 更新 (2026.04):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                加入非线性反转曲线 (Film Curve) 调节，有效解决反转时的颜色压缩与断层问题，还原更真实的胶片光影过渡。
+            </p>
+        </div>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; max-width: 300px; font-size: 13px; color: #999;">
             <p style="margin-bottom: 8px;"><strong>🚀 v2.1 更新 (2026.03):</strong></p>
             <p style="margin-bottom: 0; line-height: 1.6;">
                 新增后置摄像头切换功能，支持多摄手机自由选择不同镜头。
@@ -388,6 +396,10 @@
         <div class="control-group">
             <label>Gamma / 曝光 <span id="gammaVal">1.8</span></label>
             <input type="range" id="gamma" min="0.5" max="3.5" step="0.1" value="1.8">
+        </div>
+        <div class="control-group">
+            <label>Film Curve / 反转曲线 <span id="filmCurveVal">1.5</span></label>
+            <input type="range" id="filmCurve" min="1.0" max="3.0" step="0.1" value="1.5">
         </div>
         <div class="control-group">
             <label>Black Level / 暗部 <span id="blackVal">5</span></label>
@@ -455,11 +467,12 @@
         let program, positionLocation, texCoordLocation;
         let positionBuffer, texCoordBuffer;
         let texture;
-        let u_image, u_gamma, u_black, u_white, u_saturation, u_mask, u_isNormalMode;
+        let u_image, u_gamma, u_filmCurve, u_black, u_white, u_saturation, u_mask, u_isNormalMode;
 
         // Cached UI values
         let uiValues = {
             gamma: 1.8,
+            filmCurve: 1.5,
             black: 0.05,
             white: 0.95,
             saturation: 1.0,
@@ -482,6 +495,7 @@
             precision mediump float;
             uniform sampler2D u_image;
             uniform float u_gamma;
+            uniform float u_filmCurve;
             uniform float u_black;
             uniform float u_white;
             uniform float u_saturation;
@@ -501,8 +515,9 @@
                 vec3 pixel = max(color.rgb, vec3(0.001));
                 vec3 mask = max(u_mask, vec3(0.001));
                 
-                // Invert and apply mask in linear space (simplified log approximation)
-                vec3 inverted = 1.0 - (pixel / mask);
+                // Invert and apply mask in non-linear space
+                vec3 inverted = max(vec3(0.0), 1.0 - (pixel / mask));
+                inverted = pow(inverted, vec3(u_filmCurve));
 
                 // 2. Levels (Black/White point)
                 vec3 leveled = (inverted - u_black) / (u_white - u_black);
@@ -555,6 +570,7 @@
 
             u_image = gl.getUniformLocation(program, "u_image");
             u_gamma = gl.getUniformLocation(program, "u_gamma");
+            u_filmCurve = gl.getUniformLocation(program, "u_filmCurve");
             u_black = gl.getUniformLocation(program, "u_black");
             u_white = gl.getUniformLocation(program, "u_white");
             u_saturation = gl.getUniformLocation(program, "u_saturation");
@@ -663,6 +679,7 @@
 
             gl.uniform1i(u_image, 0);
             gl.uniform1f(u_gamma, uiValues.gamma);
+            gl.uniform1f(u_filmCurve, uiValues.filmCurve);
             gl.uniform1f(u_black, uiValues.black);
             gl.uniform1f(u_white, uiValues.white);
             gl.uniform1f(u_saturation, uiValues.saturation);
@@ -846,6 +863,7 @@
 
         function updateUiValues() {
             uiValues.gamma = parseFloat(document.getElementById('gamma').value);
+            uiValues.filmCurve = parseFloat(document.getElementById('filmCurve').value);
             uiValues.black = parseInt(document.getElementById('black').value) / 100.0;
             uiValues.white = parseInt(document.getElementById('white').value) / 100.0;
             uiValues.saturation = parseFloat(document.getElementById('saturation').value);
