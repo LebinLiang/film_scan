@@ -24,6 +24,8 @@ FilmScan Pro is a mobile web tool designed for film scanning and visualization. 
 
 ---
 
-**Live Demo / 项目地址:** [https://lebinliang.github.io/film_scan/](https://lebinliang.github.io/film_scan/)
+**Live Demo / 项目地址:**
+* Chinese / 中文版: [https://lebinliang.github.io/film_scan/](https://lebinliang.github.io/film_scan/)
+* English / 英文版: [https://lebinliang.github.io/film_scan/index_en.html](https://lebinliang.github.io/film_scan/index_en.html)
 
 **Author / 作者:** [lebinliang](https://github.com/lebinliang)

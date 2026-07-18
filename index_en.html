@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FilmScan Pro</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --accent-color: #ffaa33;
+            --text-primary: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* Startup overlay: mobile browsers require a user gesture before opening the camera */
+        #startOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .viewer-section {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.show-controls .viewer-section {
+            flex: 0 0 50dvh !important;
+            height: 50dvh !important;
+        }
+
+        #processedCanvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #videoSource {
+            display: none;
+        }
+
+        .reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .controls-section {
+            background: #1a1a1e;
+            padding: 0;
+            height: 0;
+            overflow: hidden;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 1px solid #333;
+        }
+
+        body.show-controls .controls-section {
+            flex: 0 0 50dvh !important;
+            height: 50dvh !important;
+            padding: 20px;
+            overflow-y: auto !important;
+            display: block !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #settingsToggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-color);
+            border-radius: 25px;
+            display: none;
+            /* Hidden until camera starts */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #settingsToggle svg {
+            width: 24px;
+            height: 24px;
+            fill: #000;
+            transition: transform 0.3s ease;
+        }
+
+        body.show-controls #settingsToggle {
+            bottom: calc(50dvh - 25px);
+            transform: rotate(90deg);
+        }
+
+        /* Floating Button Base Style */
+        .float-btn {
+            position: fixed;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: #444;
+            border-radius: 25px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .float-btn.active {
+            background: #e74c3c;
+            /* Red for Lock */
+            border-color: #fff;
+        }
+
+        .float-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+        }
+
+        /* Stack Positioning */
+        #modeToggle {
+            /* Special positioning handled by base style + override */
+            bottom: 80px;
+        }
+
+        #fullscreenToggle {
+            bottom: 140px;
+        }
+
+        /* Split-screen Adjustments */
+        body.show-controls #modeToggle {
+            bottom: calc(50dvh + 35px);
+        }
+
+        body.show-controls #fullscreenToggle {
+            bottom: calc(50dvh + 95px);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .control-group label span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            -webkit-appearance: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-color);
+            border-radius: 50%;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+        }
+
+        /* Camera Selector Styles */
+        .camera-selector-group {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+
+        .camera-selector-group label {
+            display: block;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .camera-selector-group label .camera-icon {
+            margin-right: 6px;
+        }
+
+        #cameraSelect {
+            width: 100%;
+            padding: 12px 14px;
+            background: #2a2a2e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #cameraSelect:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 170, 51, 0.2);
+        }
+
+        #cameraSelect option {
+            background: #2a2a2e;
+            color: #fff;
+            padding: 8px;
+        }
+
+        .camera-count-badge {
+            display: inline-block;
+            background: var(--accent-color);
+            color: #000;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="debug"></div>
+
+    <div id="settingsToggle" onclick="toggleControls()">
+        <svg viewBox="0 0 24 24">
+            <path
+                d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.13,5.91,7.62,6.29L5.23,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.72,8.87 C2.61,9.08,2.66,9.34,2.83,9.48l2.03,1.58C4.82,11.36,4.8,11.67,4.8,12c0,0.33,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" />
+        </svg>
+    </div>
+
+    <div id="modeToggle" class="float-btn" onclick="toggleMode()" style="background: #444 !important;" title="Toggle normal/negative view">
+        <svg viewBox="0 0 24 24">
+            <path
+                d="M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z" />
+        </svg>
+    </div>
+
+    <div id="fullscreenToggle" class="float-btn" onclick="toggleFullscreen()" title="Fullscreen">
+        <svg viewBox="0 0 24 24">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+        </svg>
+    </div>
+
+    <!-- Startup screen -->
+    <div id="startOverlay">
+        <h1 style="margin-bottom: 10px;">FilmScan Pro</h1>
+        <p style="color: #999; margin-bottom: 20px; font-size: 14px;">Real-time film negative preview and mask removal</p>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>How to use:</strong></p>
+            <ul style="padding-left: 20px; margin-bottom: 10px;">
+                <li>Place the film on an evenly lit screen or light box.</li>
+                <li>Aim at the film base, then tap “Sample Mask” to remove the negative’s color cast.</li>
+                <li>Adjust the controls for the best preview.</li>
+            </ul>
+            <p style="color: #ffaa33; font-size: 12px; margin-top: 10px;">
+                <em>⚠ Note: Phone white-balance processing and the backlight source affect color. This tool is intended for real-time preview only and cannot match the color accuracy of a professional scanner.</em>
+            </p>
+        </div>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; max-width: 300px; font-size: 13px; color: #ccc;">
+            <p style="margin-bottom: 8px;"><strong>✨ v2.2 Update (2026.04):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                Added a nonlinear Film Curve control to reduce color compression and banding during inversion, producing more natural film tones and smoother light transitions.
+            </p>
+        </div>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; max-width: 300px; font-size: 13px; color: #999;">
+            <p style="margin-bottom: 8px;"><strong>🚀 v2.1 Update (2026.03):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                Added rear-camera switching, allowing you to choose among lenses on multi-camera phones.
+            </p>
+        </div>
+
+        <div
+            style="text-align: left; background: #1a1a1e; padding: 15px; border-radius: 8px; margin-bottom: 25px; max-width: 300px; font-size: 13px; color: #666;">
+            <p style="margin-bottom: 8px;"><strong>v2.0 Update (2026.02):</strong></p>
+            <p style="margin-bottom: 0; line-height: 1.6;">
+                Added WebGL acceleration for a smooth 60 fps preview, highlight and saturation controls, and an improved film-mask removal algorithm.
+            </p>
+        </div>
+
+        <button class="btn btn-primary" onclick="initCamera()" style="width: 200px; margin-bottom: 20px;">Start Scanner</button>
+
+        <div style="margin-top: 10px; text-align: center;">
+            <p style="font-size: 13px; color: #ffaa33; margin-bottom: 10px;">📕 Follow me on Xiaohongshu to share feedback and try new tools</p>
+            <img src="./qrcode_xhs.png" alt="Xiaohongshu QR Code"
+                style="width: 150px; height: 150px; border-radius: 8px; border: 2px solid #333;">
+        </div>
+
+        <p style="font-size: 12px; color: #666; margin-top: 20px;">
+            Author: <a href="https://github.com/lebinliang" target="_blank" style="color: #999;">lebinliang</a><br>
+            Best viewed in Safari (iOS) or Chrome (Android)
+        </p>
+    </div>
+
+    <main class="viewer-section">
+        <canvas id="processedCanvas"></canvas>
+        <div class="reticle" id="reticle"></div>
+        <video id="videoSource" autoplay playsinline muted></video>
+    </main>
+
+    <section class="controls-section">
+        <div class="control-group">
+            <label>Gamma / Exposure <span id="gammaVal">1.8</span></label>
+            <input type="range" id="gamma" min="0.5" max="3.5" step="0.1" value="1.8">
+        </div>
+        <div class="control-group">
+            <label>Film Curve <span id="filmCurveVal">1.5</span></label>
+            <input type="range" id="filmCurve" min="1.0" max="3.0" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label>Black Level / Shadows <span id="blackVal">5</span></label>
+            <input type="range" id="black" min="0" max="50" step="1" value="5">
+        </div>
+        <div class="control-group">
+            <label>White Level / Highlights <span id="whiteVal">95</span></label>
+            <input type="range" id="white" min="50" max="100" step="1" value="95">
+        </div>
+        <div class="control-group">
+            <label>Saturation <span id="saturationVal">1.0</span></label>
+            <input type="range" id="saturation" min="0.0" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333;">
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Manual Mask RGB Adjustment</p>
+            <div class="control-group">
+                <label>Red <span id="rMVal">255</span></label>
+                <input type="range" id="rM" min="10" max="255" step="1" value="255">
+            </div>
+            <div class="control-group">
+                <label>Green <span id="gMVal">150</span></label>
+                <input type="range" id="gM" min="10" max="255" step="1" value="150">
+            </div>
+            <div class="control-group">
+                <label>Blue <span id="bMVal">80</span></label>
+                <input type="range" id="bM" min="10" max="255" step="1" value="80">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="doSample()">Sample Mask</button>
+            <button class="btn btn-primary" style="flex: 1;" onclick="snapshot()">Capture</button>
+        </div>
+        <div class="camera-selector-group">
+            <label>
+                Camera <span id="cameraCountBadge" class="camera-count-badge" style="display:none;"></span>
+            </label>
+            <select id="cameraSelect" onchange="switchCamera(this.value)">
+                <option value="environment">Default Rear Camera</option>
+            </select>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px; padding-bottom: 20px;">
+            Author: <a href="https://github.com/lebinliang" target="_blank"
+                style="color: #999; text-decoration: none; border-bottom: 1px solid #666;">lebinliang</a> <br>
+            Designed for Film Photography
+        </div>
+    </section>
+
+    <!-- Hidden mask inputs removed in favor of the UI controls above -->
+
+    <script>
+        const video = document.getElementById('videoSource');
+        const canvas = document.getElementById('processedCanvas');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+        let stream = null;
+        let facingMode = 'environment';
+        let selectedDeviceId = null; // null means use facingMode
+        let allVideoDevices = [];
+        let isNormalMode = false;
+        let isLocked = false;
+
+        // WebGL Variables
+        let program, positionLocation, texCoordLocation;
+        let positionBuffer, texCoordBuffer;
+        let texture;
+        let u_image, u_gamma, u_filmCurve, u_black, u_white, u_saturation, u_mask, u_isNormalMode;
+
+        // Cached UI values
+        let uiValues = {
+            gamma: 1.8,
+            filmCurve: 1.5,
+            black: 0.05,
+            white: 0.95,
+            saturation: 1.0,
+            rM: 255,
+            gM: 150,
+            bM: 80
+        };
+
+        const vertexShaderSource = `
+            attribute vec2 a_position;
+            attribute vec2 a_texCoord;
+            varying vec2 v_texCoord;
+            void main() {
+                gl_Position = vec4(a_position, 0, 1);
+                v_texCoord = a_texCoord;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision mediump float;
+            uniform sampler2D u_image;
+            uniform float u_gamma;
+            uniform float u_filmCurve;
+            uniform float u_black;
+            uniform float u_white;
+            uniform float u_saturation;
+            uniform vec3 u_mask;
+            uniform bool u_isNormalMode;
+            varying vec2 v_texCoord;
+
+            void main() {
+                vec4 color = texture2D(u_image, v_texCoord);
+                if (u_isNormalMode) {
+                    gl_FragColor = color;
+                    return;
+                }
+
+                // 1. Logarithmic Mask Subtraction (more accurate for film density)
+                // Avoid log(0) by adding a small epsilon
+                vec3 pixel = max(color.rgb, vec3(0.001));
+                vec3 mask = max(u_mask, vec3(0.001));
+                
+                // Invert and apply mask in non-linear space
+                vec3 inverted = max(vec3(0.0), 1.0 - (pixel / mask));
+                inverted = pow(inverted, vec3(u_filmCurve));
+
+                // 2. Levels (Black/White point)
+                vec3 leveled = (inverted - u_black) / (u_white - u_black);
+                leveled = clamp(leveled, 0.0, 1.0);
+
+                // 3. Gamma Correction
+                vec3 gammaCorrected = pow(leveled, vec3(1.0 / u_gamma));
+
+                // 4. Saturation
+                float luma = dot(gammaCorrected, vec3(0.299, 0.587, 0.114));
+                vec3 saturated = mix(vec3(luma), gammaCorrected, u_saturation);
+
+                gl_FragColor = vec4(saturated, 1.0);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function initWebGL() {
+            if (!gl) {
+                alert("WebGL not supported");
+                return;
+            }
+
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+            program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+                return;
+            }
+
+            positionLocation = gl.getAttribLocation(program, "a_position");
+            texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+
+            u_image = gl.getUniformLocation(program, "u_image");
+            u_gamma = gl.getUniformLocation(program, "u_gamma");
+            u_filmCurve = gl.getUniformLocation(program, "u_filmCurve");
+            u_black = gl.getUniformLocation(program, "u_black");
+            u_white = gl.getUniformLocation(program, "u_white");
+            u_saturation = gl.getUniformLocation(program, "u_saturation");
+            u_mask = gl.getUniformLocation(program, "u_mask");
+            u_isNormalMode = gl.getUniformLocation(program, "u_isNormalMode");
+
+            positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1.0, -1.0,
+                1.0, -1.0,
+                -1.0, 1.0,
+                -1.0, 1.0,
+                1.0, -1.0,
+                1.0, 1.0,
+            ]), gl.STATIC_DRAW);
+
+            texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                0.0, 1.0,
+                1.0, 1.0,
+                0.0, 0.0,
+                0.0, 0.0,
+                1.0, 1.0,
+                1.0, 0.0,
+            ]), gl.STATIC_DRAW);
+
+            texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        }
+
+        async function initCamera() {
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                let constraints;
+                if (selectedDeviceId) {
+                    // Use specific device ID for multi-camera selection
+                    constraints = {
+                        video: { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    };
+                } else {
+                    constraints = {
+                        video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    };
+                }
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                await video.play();
+                document.getElementById('startOverlay').style.display = 'none';
+                document.getElementById('settingsToggle').style.display = 'flex';
+                document.getElementById('modeToggle').style.display = 'flex';
+                document.getElementById('fullscreenToggle').style.display = 'flex';
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                if (!program) initWebGL();
+
+                // Enumerate cameras after first successful getUserMedia (labels become available)
+                await enumerateCameras();
+
+                requestAnimationFrame(loop);
+            } catch (err) {
+                alert('Unable to open the camera: ' + err.message + '\nMake sure the page is served over HTTPS or from localhost.');
+                console.error(err);
+            }
+        }
+
+        function loop() {
+            if (video.readyState >= 2) {
+                render();
+            }
+            requestAnimationFrame(loop);
+        }
+
+        function render() {
+            if (!gl) return;
+
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(program);
+
+            gl.enableVertexAttribArray(positionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.enableVertexAttribArray(texCoordLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+            gl.uniform1i(u_image, 0);
+            gl.uniform1f(u_gamma, uiValues.gamma);
+            gl.uniform1f(u_filmCurve, uiValues.filmCurve);
+            gl.uniform1f(u_black, uiValues.black);
+            gl.uniform1f(u_white, uiValues.white);
+            gl.uniform1f(u_saturation, uiValues.saturation);
+            gl.uniform3f(u_mask, uiValues.rM / 255.0, uiValues.gM / 255.0, uiValues.bM / 255.0);
+            gl.uniform1i(u_isNormalMode, isNormalMode ? 1 : 0);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+
+        function doSample() {
+            // Create a temporary canvas to sample the video frame
+            const temp = document.createElement('canvas');
+            temp.width = video.videoWidth;
+            temp.height = video.videoHeight;
+            const tempCtx = temp.getContext('2d', { willReadFrequently: true });
+            tempCtx.drawImage(video, 0, 0);
+
+            // Sample a larger area (40x40) for better accuracy
+            const sampleSize = 40;
+            const p = tempCtx.getImageData(
+                temp.width / 2 - sampleSize / 2,
+                temp.height / 2 - sampleSize / 2,
+                sampleSize,
+                sampleSize
+            ).data;
+
+            let r = 0, g = 0, b = 0;
+            let validPixels = 0;
+
+            // Calculate mean
+            for (let i = 0; i < p.length; i += 4) {
+                r += p[i];
+                g += p[i + 1];
+                b += p[i + 2];
+            }
+
+            const totalPixels = p.length / 4;
+            const rMean = r / totalPixels;
+            const gMean = g / totalPixels;
+            const bMean = b / totalPixels;
+
+            // Calculate standard deviation
+            let rVar = 0, gVar = 0, bVar = 0;
+            for (let i = 0; i < p.length; i += 4) {
+                rVar += Math.pow(p[i] - rMean, 2);
+                gVar += Math.pow(p[i + 1] - gMean, 2);
+                bVar += Math.pow(p[i + 2] - bMean, 2);
+            }
+
+            const rStdDev = Math.sqrt(rVar / totalPixels);
+            const gStdDev = Math.sqrt(gVar / totalPixels);
+            const bStdDev = Math.sqrt(bVar / totalPixels);
+
+            // Recalculate mean excluding outliers (values > 1.5 std dev from mean)
+            r = 0; g = 0; b = 0;
+            for (let i = 0; i < p.length; i += 4) {
+                if (Math.abs(p[i] - rMean) <= 1.5 * rStdDev &&
+                    Math.abs(p[i + 1] - gMean) <= 1.5 * gStdDev &&
+                    Math.abs(p[i + 2] - bMean) <= 1.5 * bStdDev) {
+                    r += p[i];
+                    g += p[i + 1];
+                    b += p[i + 2];
+                    validPixels++;
+                }
+            }
+
+            // Fallback to simple average if too many pixels were excluded
+            if (validPixels < totalPixels * 0.3) {
+                validPixels = totalPixels;
+                r = rMean * totalPixels;
+                g = gMean * totalPixels;
+                b = bMean * totalPixels;
+            }
+
+            const rAvg = Math.round(r / validPixels);
+            const gAvg = Math.round(g / validPixels);
+            const bAvg = Math.round(b / validPixels);
+
+            document.getElementById('rM').value = rAvg;
+            document.getElementById('gM').value = gAvg;
+            document.getElementById('bM').value = bAvg;
+
+            document.getElementById('rMVal').innerText = rAvg;
+            document.getElementById('gMVal').innerText = gAvg;
+            document.getElementById('bMVal').innerText = bAvg;
+
+            updateUiValues();
+        }
+
+        function toggleCam() {
+            facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+            selectedDeviceId = null;
+            initCamera();
+        }
+
+        // Enumerate all video devices and populate the camera selector
+        async function enumerateCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                allVideoDevices = devices.filter(d => d.kind === 'videoinput');
+
+                const select = document.getElementById('cameraSelect');
+                const badge = document.getElementById('cameraCountBadge');
+                const currentTrack = stream ? stream.getVideoTracks()[0] : null;
+                const currentDeviceId = currentTrack ? currentTrack.getSettings().deviceId : null;
+
+                // Clear existing options
+                select.innerHTML = '';
+
+                if (allVideoDevices.length === 0) {
+                    select.innerHTML = '<option value="">No camera detected</option>';
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                // Build friendly labels for each camera
+                allVideoDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+
+                    // Use device label if available, otherwise generate a name
+                    let label = device.label || '';
+                    if (label) {
+                        // Shorten common long labels
+                        // Try to identify camera type from label
+                        const lowerLabel = label.toLowerCase();
+                        let friendlyName = '';
+                        if (lowerLabel.includes('ultra') || lowerLabel.includes('超广') || lowerLabel.includes('wide angle')) {
+                            friendlyName = 'Ultra Wide';
+                        } else if (lowerLabel.includes('telephoto') || lowerLabel.includes('tele') || lowerLabel.includes('长焦')) {
+                            friendlyName = 'Telephoto';
+                        } else if (lowerLabel.includes('macro') || lowerLabel.includes('微距')) {
+                            friendlyName = 'Macro';
+                        } else if (lowerLabel.includes('depth') || lowerLabel.includes('深度')) {
+                            friendlyName = 'Depth';
+                        } else if (lowerLabel.includes('front') || lowerLabel.includes('前置') || lowerLabel.includes('user')) {
+                            friendlyName = 'Front Camera';
+                        } else if (lowerLabel.includes('wide') && !lowerLabel.includes('ultra')) {
+                            friendlyName = 'Wide';
+                        }
+
+                        if (friendlyName) {
+                            option.textContent = `${friendlyName} (${label})`;
+                        } else {
+                            option.textContent = label;
+                        }
+                    } else {
+                        option.textContent = `Camera ${index + 1}`;
+                    }
+
+                    // Mark currently active camera
+                    if (currentDeviceId && device.deviceId === currentDeviceId) {
+                        option.selected = true;
+                    }
+
+                    select.appendChild(option);
+                });
+
+                // Show camera count badge
+                badge.textContent = allVideoDevices.length;
+                badge.style.display = 'inline-block';
+
+            } catch (err) {
+                console.warn('Failed to enumerate cameras:', err);
+            }
+        }
+
+        // Switch to a specific camera by deviceId
+        function switchCamera(deviceId) {
+            if (!deviceId) return;
+            selectedDeviceId = deviceId;
+            initCamera();
+        }
+
+        function snapshot() {
+            const a = document.createElement('a');
+            a.download = 'scan.png';
+            a.href = canvas.toDataURL();
+            a.click();
+        }
+
+        function updateUiValues() {
+            uiValues.gamma = parseFloat(document.getElementById('gamma').value);
+            uiValues.filmCurve = parseFloat(document.getElementById('filmCurve').value);
+            uiValues.black = parseInt(document.getElementById('black').value) / 100.0;
+            uiValues.white = parseInt(document.getElementById('white').value) / 100.0;
+            uiValues.saturation = parseFloat(document.getElementById('saturation').value);
+            uiValues.rM = parseInt(document.getElementById('rM').value);
+            uiValues.gM = parseInt(document.getElementById('gM').value);
+            uiValues.bM = parseInt(document.getElementById('bM').value);
+        }
+
+        document.querySelectorAll('input').forEach(i => i.oninput = () => {
+            if (document.getElementById(i.id + 'Val')) {
+                document.getElementById(i.id + 'Val').innerText = i.value;
+            }
+            updateUiValues();
+        });
+
+        function toggleControls() {
+            document.body.classList.toggle('show-controls');
+        }
+
+        async function toggleMode() {
+            isNormalMode = !isNormalMode;
+            const btn = document.getElementById('modeToggle');
+            // Toggle reticle: show in normal mode (for sampling), hide in negative mode (for viewing)
+            document.getElementById('reticle').style.display = isNormalMode ? 'block' : 'none';
+
+            if (isNormalMode) {
+                // Normal Mode: Auto settings
+                btn.style.background = '#2ecc71'; // Green for normal
+                btn.classList.add('active');
+                await setCameraConfig('continuous');
+            } else {
+                // Negative Mode: Lock settings
+                btn.style.background = '#444'; // Grey for negative
+                btn.classList.remove('active');
+                await setCameraConfig('manual');
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Initialize sliders bounds based on camera capabilities
+        function initCameraControls() {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            const caps = track.getCapabilities();
+
+            // Helper to setup a slider
+            const setupSlider = (id, capName) => {
+                const el = document.getElementById(id);
+                if (caps[capName]) {
+                    el.min = caps[capName].min;
+                    el.max = caps[capName].max;
+                    el.step = caps[capName].step;
+                    el.parentElement.style.display = 'block';
+                } else {
+                    el.parentElement.style.display = 'none';
+                }
+            };
+
+            setupSlider('exposureTime', 'exposureTime');
+            setupSlider('iso', 'iso');
+            setupSlider('colorTemperature', 'colorTemperature');
+            setupSlider('focusDistance', 'focusDistance');
+        }
+
+        // Apply a single manual setting immediately
+        async function applyManualSetting(key, value) {
+            if (isNormalMode && !isLocked) return; // Ignore if in auto mode
+            if (!stream) return;
+
+            const track = stream.getVideoTracks()[0];
+            const advanced = {};
+            advanced[key] = parseFloat(value);
+
+            // Ensure we are in manual mode for that capability
+            if (key === 'exposureTime' || key === 'iso') advanced.exposureMode = 'manual';
+            if (key === 'colorTemperature') advanced.whiteBalanceMode = 'manual';
+            if (key === 'focusDistance') advanced.focusMode = 'manual';
+
+            try {
+                await track.applyConstraints({ advanced: [advanced] });
+                document.getElementById(key + 'Val').innerText = value;
+            } catch (e) {
+                console.error('Apply constraint failed:', e);
+            }
+        }
+
+        async function setCameraConfig(mode) {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            if (!track.getCapabilities || !track.getSettings) return;
+
+            const caps = track.getCapabilities();
+            const settings = track.getSettings();
+            const advanced = {};
+
+            if (mode === 'manual') {
+                // 1. Lock/Manual Exposure
+                if (caps.exposureMode && caps.exposureMode.includes('manual')) {
+                    advanced.exposureMode = 'manual';
+
+                    // Populate sliders with current values
+                    if (caps.exposureTime && settings.exposureTime) {
+                        advanced.exposureTime = settings.exposureTime;
+                        document.getElementById('exposureTime').value = settings.exposureTime;
+                        document.getElementById('exposureTimeVal').innerText = Math.round(settings.exposureTime);
+                    }
+                    if (caps.iso && settings.iso) {
+                        advanced.iso = settings.iso;
+                        document.getElementById('iso').value = settings.iso;
+                        document.getElementById('isoVal').innerText = settings.iso;
+                    }
+                }
+
+                // 2. Lock WB
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('manual')) {
+                    advanced.whiteBalanceMode = 'manual';
+                    if (caps.colorTemperature && settings.colorTemperature) {
+                        advanced.colorTemperature = settings.colorTemperature;
+                        document.getElementById('colorTemperature').value = settings.colorTemperature;
+                        document.getElementById('whiteBalanceModeVal').innerText = settings.colorTemperature;
+                    }
+                }
+
+                // 3. Lock Focus
+                if (caps.focusMode && caps.focusMode.includes('manual')) {
+                    advanced.focusMode = 'manual';
+                    if (caps.focusDistance && settings.focusDistance) {
+                        advanced.focusDistance = settings.focusDistance;
+                        document.getElementById('focusDistance').value = settings.focusDistance;
+                        document.getElementById('focusDistanceVal').innerText = settings.focusDistance;
+                    }
+                }
+            } else {
+                // Auto Mode
+                if (caps.exposureMode && caps.exposureMode.includes('continuous')) advanced.exposureMode = 'continuous';
+                if (caps.whiteBalanceMode && caps.whiteBalanceMode.includes('continuous')) advanced.whiteBalanceMode = 'continuous';
+                if (caps.focusMode && caps.focusMode.includes('continuous')) advanced.focusMode = 'continuous';
+
+                // Reset UI labels
+                ['exposureTimeVal', 'isoVal', 'whiteBalanceModeVal', 'focusDistanceVal'].forEach(id => {
+                    document.getElementById(id).innerText = 'Auto';
+                });
+            }
+
+            if (Object.keys(advanced).length > 0) {
+                try {
+                    await track.applyConstraints({ advanced: [advanced] });
+                } catch (e) { console.warn(e); }
+            }
+        }
+    </script>
+</body>
+
+</html>
